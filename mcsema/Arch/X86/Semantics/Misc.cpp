@@ -86,6 +86,11 @@ static InstTransResult doTrap(llvm::BasicBlock *b) {
   return ContinueBlock;
 }
 
+static InstTransResult doUnreachable(llvm::BasicBlock *b) {
+  (void) new llvm::UnreachableInst(b->getContext(), b);
+  return EndBlock;
+}
+
 static InstTransResult doInt(llvm::BasicBlock *&b, const llvm::MCOperand &o) {
   TASSERT(o.isImm(), "Operand not immediate");
   auto F = b->getParent();
@@ -897,6 +902,7 @@ GENERIC_TRANSLATION(INT, doInt(block, OP(0)))
 GENERIC_TRANSLATION(TRAP, doTrap(block))
 GENERIC_TRANSLATION(NOOP, doNoop(block))
 GENERIC_TRANSLATION(HLT, doHlt(block))
+GENERIC_TRANSLATION(SYSCALL, doUnreachable(block))
 
 GENERIC_TRANSLATION(BSWAP32r, doBswapR<32>(ip, block, OP(0)))
 GENERIC_TRANSLATION(BSWAP64r, doBswapR<64>(ip, block, OP(0)))
@@ -1234,4 +1240,6 @@ void Misc_populateDispatchMap(DispatchMap &m) {
   m[llvm::X86::BSF16rr] = translate_BSF16rr;
   m[llvm::X86::TRAP] = translate_TRAP;
   m[llvm::X86::CPUID] = translate_CPUID32;
+  m[llvm::X86::SYSCALL] = translate_SYSCALL;
+
 }
