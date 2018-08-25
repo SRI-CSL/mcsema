@@ -359,7 +359,8 @@ class NativeModule {
  public:
   NativeModule(const std::string &module_name_,
                const std::unordered_map<VA, NativeFunctionPtr> &funcs_,
-               const std::string &triple_);
+               const std::string &triple_,
+	       const std::set<std::string> &sections_blacklist_);
   ~NativeModule();
 
   void add_func(NativeFunctionPtr f);
@@ -399,6 +400,7 @@ class NativeModule {
   std::unordered_map<VA, NativeFunctionPtr> funcs;
   const std::string module_name;
   const llvm::Triple triple;
+  std::set<std::string> sections_blacklist;
 
   std::list<DataSection> data_sections;
   std::list<ExternalCodeRefPtr> external_code_refs;
@@ -417,4 +419,5 @@ enum ModuleInputFormat {
   ProtoBuff
 };
 
-NativeModulePtr ReadProtoBuf(const std::string &file_name);
+NativeModulePtr ReadProtoBuf(const std::string &file_name, 
+			     const std::set<std::string> &sections_blacklist);

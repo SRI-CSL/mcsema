@@ -84,6 +84,10 @@ static llvm::cl::opt<bool> ListCFGFunctions("list-cfg-functions",
                                            llvm::cl::desc("List CFG functions"),
                                            llvm::cl::Optional);
 
+static llvm::cl::list<std::string> SectionsBlackList("sections-blacklist",
+						     llvm::cl::desc("Blacklist of sections that won't be included in the bitcode"),
+						     llvm::cl::ZeroOrMore);
+
 static void PrintVersion(void) {
   std::cout << "This is mcsema-lift version: " << MCSEMA_VERSION_STRING << std::endl;
   std::cout << "Built from branch: " << MCSEMA_BRANCH_NAME << std::endl;
@@ -163,9 +167,16 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
+  std::set<std::string> BlackList(SectionsBlackList.begin(),
+				  SectionsBlackList.end());
+  std::cout << "Section blacklist= \n";
+  for (auto s: BlackList) {
+    std::cout << "\t" << s << "\n";
+  }
+
   //reproduce NativeModule from CFG input argument
   try {
-    std::unique_ptr<NativeModule> mod(ReadProtoBuf(InputFilename));
+    std::unique_ptr<NativeModule> mod(ReadProtoBuf(InputFilename, BlackList));
     if (!mod) {
       std::cerr << "Unable to read module from CFG" << std::endl;
       return EXIT_FAILURE;

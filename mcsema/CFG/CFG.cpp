@@ -493,10 +493,12 @@ void NativeEntrySymbol::setExtra(int argc_, bool does_ret,
 NativeModule::NativeModule(
     const std::string &module_name_,
     const std::unordered_map<VA, NativeFunctionPtr> &funcs_,
-    const std::string &triple_)
+    const std::string &triple_,
+    const std::set<std::string> &sections_blacklist_)
     : funcs(funcs_),
       module_name(module_name_),
-      triple(triple_) {}
+      triple(triple_),
+      sections_blacklist(sections_blacklist_) {}
 
 NativeModule::~NativeModule() {
   for (ExternalCodeRefPtr ptr : this->external_code_refs) {
@@ -598,15 +600,27 @@ std::string NativeBlock::get_name(void) {
 }
 
 void NativeModule::addDataSection(VA base, std::vector<uint8_t> &bytes) {
+  std::string base_str (std::to_string(base));
+  std::cout << "Adding data section " << base_str << "\n";
+  if (sections_blacklist.count(base_str) > 0)  {
+    std::cout << "\tskipped because it is in the blacklist\n";
+    return;
+  }
 
   DataSection ds;
   DataSectionEntry dse(base, bytes);
   ds.addEntry(dse);
-
   this->data_sections.push_back(ds);
 }
 
 void NativeModule::addDataSection(const DataSection &d) {
+  std::string base_str (std::to_string(d.getBase()));
+  std::cout << "Adding data section " << base_str << "\n";
+  if (sections_blacklist.count(base_str) > 0)  {
+    std::cout << "\tskipped because it is in the blacklist\n";
+    return;
+  }
+
   this->data_sections.push_back(d);
 }
 
@@ -1172,7 +1186,8 @@ static void DeserializeData(const ::Data &d, DataSection &ds) {
   }
 }
 
-NativeModulePtr ReadProtoBuf(const std::string &file_name) {
+NativeModulePtr ReadProtoBuf(const std::string &file_name, 
+			     const std::set<std::string> &sections_blacklist) {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
   NativeModulePtr m = nullptr;
@@ -1214,7 +1229,7 @@ NativeModulePtr ReadProtoBuf(const std::string &file_name) {
   std::cerr << "Deserializing data..." << std::endl;
   for (auto &internal_data_elem : proto.internal_data()) {
     DataSection ds;
-    DeserializeData(internal_data_elem, ds);
+    DeserializeData(internal_data_elem, ds);    
     data_sections.push_back(ds);
   }
 
@@ -1237,7 +1252,7 @@ NativeModulePtr ReadProtoBuf(const std::string &file_name) {
 
   std::cerr << "Creating module..." << std::endl;
   m = NativeModulePtr(
-      new NativeModule(proto.module_name(), native_funcs, ArchTriple()));
+	  new NativeModule(proto.module_name(), native_funcs, ArchTriple(), sections_blacklist));
 
   //populate the module with externals calls
   std::cerr << "Adding external funcs..." << std::endl;
